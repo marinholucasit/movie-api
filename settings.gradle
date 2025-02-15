@@ -1,0 +1,6 @@
+rootProject.name = 'movie-core'
+include 'domain'
+include 'usecase'
+include 'application'
+include 'infrastructure'
+
