@@ -18,8 +18,8 @@ public class MovieEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
-    @Column(name = "Year", nullable = false)
-    private int year;
+    @Column(name = "Year_movie", nullable = false)
+    private int yearMovie;
     @Column(name = "Title", nullable = false)
     private String title;
     @Column(name = "Studio", nullable = false)
