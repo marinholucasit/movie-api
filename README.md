@@ -12,6 +12,11 @@
 ./gradlew bootRun
 ```
 
+### Rodar testes de integração
+```sh
+./gradlew test
+```
+
 ### Testar a API
 Após rodar a aplicação, acesse no navegador ou via **Postman**:
   ```sh
