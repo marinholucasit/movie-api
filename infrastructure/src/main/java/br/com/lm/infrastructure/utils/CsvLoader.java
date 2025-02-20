@@ -26,7 +26,7 @@ public class CsvLoader {
     @PostConstruct
     public void loadMovies() throws InternalServerErrorException {
 
-        InputStream inputStream = getClass().getClassLoader().getResourceAsStream("movielist.csv");
+        InputStream inputStream = getClass().getClassLoader().getResourceAsStream("Movielist.csv");
 
         InputStreamReader inputStreamReader = new InputStreamReader(Objects.requireNonNull(inputStream));
 

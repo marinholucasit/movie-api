@@ -8,6 +8,7 @@ import br.com.lm.usecase.model.ProducerAwardIntervalsModel;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ProducersIntervalUsecaseImpl implements ProducersIntervalUseCase {
 
@@ -20,44 +21,55 @@ public class ProducersIntervalUsecaseImpl implements ProducersIntervalUseCase {
     @Override
     public ProducerAwardIntervalsModel execute() {
         List<Movie> winners = producersIntervalGateway.findWinningMovies();
-        Map<String, List<Integer>> producerAwards = new HashMap<>();
 
-        for (Movie movie : winners) {
-            String[] producers = movie.getProducer().split(",| and ");
-            for (String producer : producers) {
-                producer = producer.trim();
-                producerAwards.computeIfAbsent(producer, k -> new ArrayList<>()).add(movie.getYear());
-            }
+        Map<String, List<Integer>> producerAwards = groupAwardsData(winners);
+
+        List<AwardIntervalModel> allIntervals = calculateIntervals(producerAwards);
+
+        if (allIntervals.isEmpty()) {
+            return new ProducerAwardIntervalsModel(Collections.emptyList(), Collections.emptyList());
         }
 
-        List<AwardIntervalModel> allIntervals = new ArrayList<>();
+        int minInterval = allIntervals.stream().mapToInt(AwardIntervalModel::getInterval).min().orElseThrow();
+        int maxInterval = allIntervals.stream().mapToInt(AwardIntervalModel::getInterval).max().orElseThrow();
 
-        for (Map.Entry<String, List<Integer>> entry : producerAwards.entrySet()) {
-            String producer = entry.getKey();
-            List<Integer> years = entry.getValue();
-            Collections.sort(years);
+        return new ProducerAwardIntervalsModel(
+                filterIntervals(allIntervals, minInterval),
+                filterIntervals(allIntervals, maxInterval)
+        );
+    }
 
-            if (years.size() >= 2) {
-                for (int i = 1; i < years.size(); i++) {
-                    int interval = years.get(i) - years.get(i - 1);
-                    int previousWin = years.get(i - 1);
-                    int followingWin = years.get(i);
-                    allIntervals.add(new AwardIntervalModel(producer, interval, previousWin, followingWin));
-                }
-            }
-        }
+    private Map<String, List<Integer>> groupAwardsData(List<Movie> winners) {
+        return winners.stream()
+                .flatMap(movie -> groupProducers(movie.getProducer()).stream()
+                        .map(producer -> new AbstractMap.SimpleEntry<>(producer, movie.getYear())))
+                .collect(Collectors.groupingBy(Map.Entry::getKey,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+    }
 
-        int minInterval = allIntervals.stream().mapToInt(AwardIntervalModel::getInterval).min().orElse(0);
-        int maxInterval = allIntervals.stream().mapToInt(AwardIntervalModel::getInterval).max().orElse(0);
-
-        List<AwardIntervalModel> minIntervals = allIntervals.stream()
-                .filter(dto -> dto.getInterval() == minInterval)
+    private List<String> groupProducers(String producers) {
+        return Arrays.stream(producers.split(",| and "))
+                .map(String::trim)
+                .filter(producer -> !producer.isEmpty())
                 .collect(Collectors.toList());
+    }
 
-        List<AwardIntervalModel> maxIntervals = allIntervals.stream()
-                .filter(dto -> dto.getInterval() == maxInterval)
+    private List<AwardIntervalModel> calculateIntervals(Map<String, List<Integer>> producerAwards) {
+        return producerAwards.entrySet().stream()
+                .flatMap(entry -> {
+                    List<Integer> years = entry.getValue().stream().sorted().toList();
+                    return IntStream.range(1, years.size())
+                            .mapToObj(i -> new AwardIntervalModel(entry.getKey(),
+                                    years.get(i) - years.get(i - 1),
+                                    years.get(i - 1),
+                                    years.get(i)));
+                })
                 .collect(Collectors.toList());
+    }
 
-        return new ProducerAwardIntervalsModel(minIntervals, maxIntervals);
+    private List<AwardIntervalModel> filterIntervals(List<AwardIntervalModel> intervals, int targetInterval) {
+        return intervals.stream()
+                .filter(interval -> interval.getInterval() == targetInterval)
+                .toList();
     }
 }
